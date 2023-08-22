@@ -5,44 +5,77 @@
 use core::alloc::Layout;
 use core::num::NonZeroUsize;
 
-use crate::{AllocResult, BaseAllocator, ByteAllocator};
+use crate::{AllocResult, BaseAllocator, ByteAllocator, AllocError};
 
-pub struct SimpleByteAllocator;
+pub struct SimpleByteAllocator {
+    data: [u8; Self::SIZE],
+    // point to first free mem addr
+    ptr: usize,
+    // if num_allocations 1->0, then reset ptr to 0
+    num_allocations: usize
+}
 
 impl SimpleByteAllocator {
+    const SIZE: usize = 10 * 1024 * 1024;
     pub const fn new() -> Self {
-        Self {}
+        Self {
+            data: [0; Self::SIZE],
+            ptr: 0,
+            num_allocations: 0
+        }
     }
 }
 
 impl BaseAllocator for SimpleByteAllocator {
-    fn init(&mut self, _start: usize, _size: usize) {
-        todo!();
-    }
+    fn init(&mut self, _start: usize, _size: usize) {}
 
     fn add_memory(&mut self, _start: usize, _size: usize) -> AllocResult {
-        todo!();
+        Ok(())
     }
 }
 
 impl ByteAllocator for SimpleByteAllocator {
-    fn alloc(&mut self, _layout: Layout) -> AllocResult<NonZeroUsize> {
-        todo!();
+    /// See also: slice::align_to
+    /// Why return ptr is NonZeroUsize not NonNull?
+    fn alloc(&mut self, layout: Layout) -> AllocResult<NonZeroUsize> {
+        let size = layout.size();
+        let align = 2usize.pow(layout.align() as u32);
+
+        let div = size / align;
+        let rem = size % align;
+        let size = if rem != 0 {
+            div + 1
+        } else {
+            div
+        } * align;
+
+        if self.ptr + size > Self::SIZE {
+            return Err(AllocError::NoMemory);
+        }
+        let start = self.ptr;
+        self.ptr += size;
+        self.num_allocations += 1;
+        let ptr = self.data[start..self.ptr].as_mut_ptr() as usize;
+
+        Ok(NonZeroUsize::new(ptr).unwrap())
     }
 
     fn dealloc(&mut self, _pos: NonZeroUsize, _layout: Layout) {
-        todo!();
+        self.num_allocations -= 1;
+        if self.num_allocations == 0 {
+            self.ptr = 0;
+        }
     }
 
     fn total_bytes(&self) -> usize {
-        todo!();
+        Self::SIZE
     }
 
     fn used_bytes(&self) -> usize {
-        todo!();
+        self.ptr
     }
 
     fn available_bytes(&self) -> usize {
-        todo!();
+        Self::SIZE - self.ptr
     }
 }
