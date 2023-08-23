@@ -79,3 +79,26 @@ impl ByteAllocator for SimpleByteAllocator {
         Self::SIZE - self.ptr
     }
 }
+
+#[cfg(not)]
+unsafe impl core::alloc::GlobalAlloc for SimpleByteAllocator {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        todo!()
+    }
+
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        todo!()
+    }
+}
+
+/// Allocator is a type parameter in Vec
+#[cfg(not)]
+unsafe impl core::alloc::Allocator for SimpleByteAllocator {
+    fn allocate(&self, layout: Layout) -> Result<core::ptr::NonNull<[u8]>, core::alloc::AllocError> {
+        todo!()
+    }
+
+    unsafe fn deallocate(&self, ptr: core::ptr::NonNull<u8>, layout: Layout) {
+        todo!()
+    }
+}
