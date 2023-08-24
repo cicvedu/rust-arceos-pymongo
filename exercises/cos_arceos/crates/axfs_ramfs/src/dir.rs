@@ -4,6 +4,7 @@ use alloc::{string::String, vec::Vec};
 
 use axfs_vfs::{VfsDirEntry, VfsNodeAttr, VfsNodeOps, VfsNodeRef, VfsNodeType};
 use axfs_vfs::{VfsError, VfsResult};
+use log::warn;
 use spin::RwLock;
 
 use crate::file::FileNode;
@@ -80,6 +81,7 @@ impl VfsNodeOps for DirNode {
 
     fn lookup(self: Arc<Self>, path: &str) -> VfsResult<VfsNodeRef> {
         let (name, rest) = split_path(path);
+        warn!("lookup name={name}, rest={rest:?}");
         let node = match name {
             "" | "." => Ok(self.clone() as VfsNodeRef),
             ".." => self.parent().ok_or(VfsError::NotFound),
@@ -165,8 +167,32 @@ impl VfsNodeOps for DirNode {
         }
     }
 
-    fn rename(&self, _src: &str, _dst: &str) -> VfsResult {
-        todo!("Implement rename for ramfs!");
+    /// self is src's parent dir
+    fn rename(&self, src: &str, dst: &str) -> VfsResult {
+        use crate::alloc::borrow::ToOwned;
+        warn!("rename(src: {src}, dst: {dst})");
+
+        let mut cur = self.parent();
+        let mut prev = cur.clone();
+        while let Some(ref x) = cur {
+            prev = cur.clone();
+            cur = x.parent();
+        }
+        // let dst_parent = prev.unwrap().lookup(dst).unwrap();
+        // let dst_parent= dst_parent.as_any().downcast_ref::<DirNode>().unwrap();
+        let dst_parent = self;
+
+        let (src_dir, src_name) = split_path(src);
+        let (dst_dir, dst_name) = split_path(dst);
+        warn!("src_dir={src_dir} src_name={src_name:?} dst_dir={dst_dir} dst_name={dst_name:?}");
+
+        // let mut children = self.children.write();
+        let entry = self.children.write().remove(src_dir).unwrap();
+        dst_parent
+            .children
+            .write()
+            .insert(dst_name.unwrap().to_owned(), entry);
+        Ok(())
     }
 
     axfs_vfs::impl_vfs_dir_default! {}

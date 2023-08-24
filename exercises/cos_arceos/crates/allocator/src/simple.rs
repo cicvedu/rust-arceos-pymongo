@@ -5,14 +5,14 @@
 use core::alloc::Layout;
 use core::num::NonZeroUsize;
 
-use crate::{AllocResult, BaseAllocator, ByteAllocator, AllocError};
+use crate::{AllocError, AllocResult, BaseAllocator, ByteAllocator};
 
 pub struct SimpleByteAllocator {
     data: [u8; Self::SIZE],
     // point to first free mem addr
     ptr: usize,
     // if num_allocations 1->0, then reset ptr to 0
-    num_allocations: usize
+    num_allocations: usize,
 }
 
 impl SimpleByteAllocator {
@@ -21,7 +21,7 @@ impl SimpleByteAllocator {
         Self {
             data: [0; Self::SIZE],
             ptr: 0,
-            num_allocations: 0
+            num_allocations: 0,
         }
     }
 }
@@ -43,11 +43,7 @@ impl ByteAllocator for SimpleByteAllocator {
 
         let div = size / align;
         let rem = size % align;
-        let size = if rem != 0 {
-            div + 1
-        } else {
-            div
-        } * align;
+        let size = if rem != 0 { div + 1 } else { div } * align;
 
         if self.ptr + size > Self::SIZE {
             return Err(AllocError::NoMemory);
@@ -94,7 +90,10 @@ unsafe impl core::alloc::GlobalAlloc for SimpleByteAllocator {
 /// Allocator is a type parameter in Vec
 #[cfg(not)]
 unsafe impl core::alloc::Allocator for SimpleByteAllocator {
-    fn allocate(&self, layout: Layout) -> Result<core::ptr::NonNull<[u8]>, core::alloc::AllocError> {
+    fn allocate(
+        &self,
+        layout: Layout,
+    ) -> Result<core::ptr::NonNull<[u8]>, core::alloc::AllocError> {
         todo!()
     }
 

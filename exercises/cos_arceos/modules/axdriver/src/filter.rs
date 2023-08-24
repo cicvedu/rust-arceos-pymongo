@@ -1,4 +1,5 @@
 use driver_common::{BaseDriverOps, DeviceType};
+#[cfg(feature = "net")]
 use driver_net::NetDriverOps;
 
 pub struct NetFilter<T: BaseDriverOps> {
@@ -25,6 +26,7 @@ impl<T: BaseDriverOps> NetFilter<T> {
     }
 }
 
+#[cfg(feature = "net")]
 impl<T: BaseDriverOps + NetDriverOps> NetDriverOps for NetFilter<T> {
     fn mac_address(&self) -> driver_net::EthernetAddress {
         self.inner.mac_address()
@@ -55,11 +57,16 @@ impl<T: BaseDriverOps + NetDriverOps> NetDriverOps for NetFilter<T> {
     }
 
     fn transmit(&mut self, tx_buf: driver_net::NetBufPtr) -> driver_common::DevResult {
+        warn!("Filter: transmit len[{}]", tx_buf.packet_len());
         self.inner.transmit(tx_buf)
     }
 
     fn receive(&mut self) -> driver_common::DevResult<driver_net::NetBufPtr> {
-        self.inner.receive()
+        let ret = self.inner.receive();
+        if let Ok(ref x) = ret {
+            warn!("Filter: receive  len[{}]", x.packet_len());
+        }
+        ret
     }
 
     fn alloc_tx_buffer(&mut self, size: usize) -> driver_common::DevResult<driver_net::NetBufPtr> {

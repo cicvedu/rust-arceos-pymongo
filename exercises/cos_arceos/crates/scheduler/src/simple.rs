@@ -1,11 +1,11 @@
+use crate::BaseScheduler;
 use alloc::{collections::VecDeque, sync::Arc};
 use core::{ops::Deref, sync::atomic::AtomicU8};
-use crate::BaseScheduler;
 
 /// A task wrapper for the [`SimpleScheduler`].
 pub struct SimpleTask<T> {
     inner: T,
-    remain_time_slice: AtomicU8
+    remain_time_slice: AtomicU8,
 }
 
 impl<T> SimpleTask<T> {
@@ -13,7 +13,7 @@ impl<T> SimpleTask<T> {
     pub const fn new(inner: T) -> Self {
         Self {
             inner,
-            remain_time_slice: AtomicU8::new(5)
+            remain_time_slice: AtomicU8::new(5),
         }
     }
 
@@ -84,14 +84,16 @@ impl<T> BaseScheduler for SimpleScheduler<T> {
 
     fn task_tick(&mut self, current: &Self::SchedItem) -> bool {
         // warn!("{}", current.remain_time_slice);
-        
+
         // these not work
         // let remain = &mut unsafe { *(&current.remain_time_slice as *const u8 as *mut u8)};
         // warn!("remain1 = {}", remain);
         // *remain -= 1;
         // warn!("remain2 = {}", remain);
 
-        let old_remain = current.remain_time_slice.fetch_sub(1, core::sync::atomic::Ordering::Relaxed);
+        let old_remain = current
+            .remain_time_slice
+            .fetch_sub(1, core::sync::atomic::Ordering::Relaxed);
         old_remain == 1
     }
 
